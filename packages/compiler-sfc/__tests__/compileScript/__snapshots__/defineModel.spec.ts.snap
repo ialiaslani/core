@@ -177,7 +177,7 @@ export default /*@__PURE__*/_defineComponent({
     "countModifiers": {},
     "disabled": { type: Number, ...{ required: false } },
     "disabledModifiers": {},
-    "any": { type: Boolean, skipCheck: true },
+    "any": { type: null },
     "anyModifiers": {},
   },
   emits: ["update:modelValue", "update:count", "update:disabled", "update:any"],

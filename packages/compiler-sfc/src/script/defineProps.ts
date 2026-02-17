@@ -219,13 +219,13 @@ function resolveRuntimePropsFromType(
     let type = inferRuntimeType(ctx, e)
     let skipCheck = false
     // skip check for result containing unknown types
+    // If the type contains UNKNOWN_TYPE, we cannot be sure we've analyzed
+    // the whole TypeScript type. We should set type to null (no type checking)
+    // to be conservative and avoid false-positive warnings and incorrect
+    // default value handling (e.g., when prop type is Function and default
+    // is a factory function).
     if (type.includes(UNKNOWN_TYPE)) {
-      if (type.includes('Boolean') || type.includes('Function')) {
-        type = type.filter(t => t !== UNKNOWN_TYPE)
-        skipCheck = true
-      } else {
-        type = ['null']
-      }
+      type = ['null']
     }
     props.push({
       key,

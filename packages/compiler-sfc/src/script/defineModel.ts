@@ -126,29 +126,34 @@ export function genModelProps(ctx: ScriptCompileContext): string | undefined {
     let codegenOptions = ``
     let runtimeTypes = type && inferRuntimeType(ctx, type)
     if (runtimeTypes) {
-      const hasBoolean = runtimeTypes.includes('Boolean')
-      const hasFunction = runtimeTypes.includes('Function')
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
+      // If the type contains UNKNOWN_TYPE, we cannot be sure we've analyzed
+      // the whole TypeScript type. We should set type to null (no type checking)
+      // to be conservative and avoid false-positive warnings and incorrect
+      // default value handling.
       if (hasUnknownType) {
-        if (hasBoolean || hasFunction) {
-          runtimeTypes = runtimeTypes.filter(t => t !== UNKNOWN_TYPE)
-          skipCheck = true
+        runtimeTypes = ['null']
+      } else {
+        const hasBoolean = runtimeTypes.includes('Boolean')
+        const hasFunction = runtimeTypes.includes('Function')
+
+        if (!isProd) {
+          codegenOptions =
+            `type: ${toRuntimeTypeString(runtimeTypes)}` +
+            (skipCheck ? ', skipCheck: true' : '')
+        } else if (hasBoolean || (runtimeOptions && hasFunction)) {
+          // preserve types if contains boolean, or
+          // function w/ runtime options that may contain default
+          codegenOptions = `type: ${toRuntimeTypeString(runtimeTypes)}`
         } else {
-          runtimeTypes = ['null']
+          // able to drop types in production
         }
       }
 
-      if (!isProd) {
-        codegenOptions =
-          `type: ${toRuntimeTypeString(runtimeTypes)}` +
-          (skipCheck ? ', skipCheck: true' : '')
-      } else if (hasBoolean || (runtimeOptions && hasFunction)) {
-        // preserve types if contains boolean, or
-        // function w/ runtime options that may contain default
-        codegenOptions = `type: ${toRuntimeTypeString(runtimeTypes)}`
-      } else {
-        // able to drop types in production
+      // If runtimeTypes is ['null'], we still need to generate codegenOptions for dev mode
+      if (hasUnknownType && !isProd) {
+        codegenOptions = `type: null`
       }
     }
 

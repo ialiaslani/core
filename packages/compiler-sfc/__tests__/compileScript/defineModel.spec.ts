@@ -99,7 +99,9 @@ describe('defineModel()', () => {
     expect(content).toMatch(
       '"disabled": { type: Number, ...{ required: false } }',
     )
-    expect(content).toMatch('"any": { type: Boolean, skipCheck: true }')
+    // #14401: When UNKNOWN_TYPE (from `any`) is present in a union, we should
+    // set type to null instead of inferring a partial type
+    expect(content).toMatch('"any": { type: null }')
     expect(content).toMatch(
       'emits: ["update:modelValue", "update:count", "update:disabled", "update:any"]',
     )

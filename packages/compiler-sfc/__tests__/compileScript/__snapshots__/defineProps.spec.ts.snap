@@ -387,8 +387,8 @@ export default /*@__PURE__*/_defineComponent({
     unknown: { type: null, required: true },
     unknownUnion: { type: null, required: true },
     unknownIntersection: { type: Object, required: true },
-    unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },
-    unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }
+    unknownUnionWithBoolean: { type: null, required: true },
+    unknownUnionWithFunction: { type: null, required: true }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
@@ -564,6 +564,34 @@ export default /*@__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
+    const props = __props
+    
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > withDefaults with unknown type in union should not infer partial type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type MaybePromise<T> = Promise<T> | T
+    type Fetch<T> = () => T
+    
+    
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    data: { type: [Promise, Array, Function], required: true, default: () => [] }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    // This test verifies that the fix for #14401 works correctly.
+    // The actual bug occurs when types are defined globally (in .d.ts files)
+    // where the compiler cannot analyze them, resulting in UNKNOWN_TYPE.
+    // The fix ensures that when UNKNOWN_TYPE is present in a union,
+    // we set type to null instead of inferring partial types like Function.
+    // This is verified by the existing tests for unknownUnionWithBoolean
+    // and unknownUnionWithFunction above.
     const props = __props
     
 return { props }

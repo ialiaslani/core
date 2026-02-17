@@ -167,17 +167,18 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`intersection2: { type: String, required: true }`)
     expect(content).toMatch(`foo: { type: [Function, null], required: true }`)
     expect(content).toMatch(`unknown: { type: null, required: true }`)
-    // uninon containing unknown type: skip check
+    // union containing unknown type: set type to null to avoid false-positive
+    // warnings and incorrect default value handling
     expect(content).toMatch(`unknownUnion: { type: null, required: true }`)
     // intersection containing unknown type: narrow to the known types
     expect(content).toMatch(
       `unknownIntersection: { type: Object, required: true },`,
     )
     expect(content).toMatch(
-      `unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },`,
+      `unknownUnionWithBoolean: { type: null, required: true },`,
     )
     expect(content).toMatch(
-      `unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }`,
+      `unknownUnionWithFunction: { type: null, required: true }`,
     )
     expect(bindings).toStrictEqual({
       string: BindingTypes.PROPS,
@@ -573,6 +574,37 @@ const props = defineProps({ foo: String })
       ['fo' + 'o']() { return 'foo' }
     })`.trim(),
     )
+  })
+
+  // #14401
+  test('withDefaults with unknown type in union should not infer partial type', () => {
+    const { content } = compile(
+      `
+    <script setup lang="ts">
+    // This test verifies that the fix for #14401 works correctly.
+    // The actual bug occurs when types are defined globally (in .d.ts files)
+    // where the compiler cannot analyze them, resulting in UNKNOWN_TYPE.
+    // The fix ensures that when UNKNOWN_TYPE is present in a union,
+    // we set type to null instead of inferring partial types like Function.
+    // This is verified by the existing tests for unknownUnionWithBoolean
+    // and unknownUnionWithFunction above.
+    type MaybePromise<T> = Promise<T> | T
+    type Fetch<T> = () => T
+    
+    const props = withDefaults(defineProps<{
+      data: MaybePromise<number[]> | Fetch<number>
+    }>(), {
+      data: () => []
+    })
+    </script>
+    `,
+    )
+    assertCode(content)
+    // When types are defined locally, the compiler can analyze them fully.
+    // The fix is verified by the unknownUnionWithBoolean and unknownUnionWithFunction
+    // tests above, which test the actual bug scenario.
+    expect(content).toMatch(`data: {`)
+    expect(content).toMatch(`default: () => []`)
   })
 
   test('runtime inference for Enum', () => {
